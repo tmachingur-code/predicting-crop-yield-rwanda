@@ -1,34 +1,44 @@
 # Predicting Crop Yield in Rwanda
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tmachingur-code/predicting-crop-yield-rwanda/blob/main/notebooks/Predicting_Crop_Yield_Rwanda.ipynb)
+Machine learning on Rwanda's Seasonal Agriculture Survey (Season A, 2021/22). For maize, bush bean and cassava, the model estimates how far a plot's yield is above or below the **typical plot of the same crop**, and shows which factors are linked to better or worse plots.
 
-A machine learning project that predicts how well a plot will do compared with a typical plot of the **same crop** in Rwanda's Season A. It uses plot-level microdata from the National Institute of Statistics of Rwanda (NISR) Seasonal Agriculture Survey.
+**Team:** Charles, Tsungirirai, Mugisha | **Mentor:** Stephen
 
-> **Status: work in progress (Week 3 draft).** Data merging, cleaning, EDA and the "quick check" are done for 2021/22. The year-to-year test, the anti-erosion screening table and SHAP are still to do (see [Roadmap](#roadmap)). Known issues and recommended fixes are in [docs/PROBLEMS_AND_FIXES.md](docs/PROBLEMS_AND_FIXES.md).
+## The problem
 
-## Why this project
+Yields differ a lot between plots, even for the same crop. Extension officers, cooperatives and agricultural planners need to know where plots are likely to fall short, and which conditions go with that, so limited support can be targeted. Existing survey data answers this only at an aggregate level.
 
-Rwandan farmers work small plots, often on hillsides, and yields differ a lot between plots, even for the same crop. Extension officers, cooperatives and planners have to decide where to put limited support (fertilizer, irrigation, soil conservation, land consolidation) with little plot-level evidence.
+## Approach
 
-The question: *given the crop, location, soil erosion level, inputs and practices, how far above or below a typical plot of the same crop should we expect this plot's yield to be, and which factors are most linked to it?*
+- **Target (y), relative yield:** `log(yield in kg/ha) - median log(yield) of the same crop`. A value of 0 is a typical plot, and `exp(y)` is the ratio to typical (1.25 means 25% above typical). Predicting raw yield would mostly reward the model for knowing the crop: crop type alone gave R² = 0.75, but within a single crop the first models explained almost nothing.
+- **Features (X):** crop, province, district and land type, farmer type, gender and age, plot size, fertilizer and pesticide use and fertilizer quantity, soil erosion degree, anti-erosion work, land consolidation, irrigation, seed type and cost, planting period, hired labour and mechanisation. Nothing calculated from the harvest is used.
+- **Leakage control:** crop medians and outlier caps come from training data only. Cross-validation folds are grouped by survey segment, so plots from the same area never appear in both training and test. Final scores come from 20% of segments never used for tuning.
+- **Methods compared:** a median guess (predict that every plot is typical), ridge regression, random forest and gradient boosting.
 
-## Target: relative yield
+## Results
 
-Crops differ enormously in yield, so predicting raw yield mostly rewards the model for knowing the crop. Instead we predict **relative yield**:
+Test scores per crop, 5-fold cross-validation grouped by survey segment. R² is measured on relative yield; error is the average absolute error in kg/ha.
 
-```
-log_yield        = ln(harvested quantity / harvested area)        # kg/ha
-crop_median      = median log_yield of the crop (training rows only)
-relative_yield   = log_yield - crop_median                        # 0 = typical plot
-ratio to typical = exp(relative_yield)                            # 1.25 = 25% above typical
-predicted kg/ha  = crop median yield * exp(predicted relative_yield)
-```
+| Crop | Median guess (R² / error) | Ridge | Random forest | **Gradient boosting (simple)** |
+|---|---|---|---|---|
+| Maize | -0.01 / 857 | 0.18 / 767 | 0.20 / 757 | **0.21 / 753** |
+| Bush bean | 0.00 / 283 | 0.03 / 266 | 0.11 / 266 | **0.13 / 260** |
+| Cassava | -0.01 / 5,433 | 0.23 / 4,403 | 0.14 / 4,760 | **0.23 / 4,353** |
 
-Crop medians and the 99th-percentile caps are computed from the training rows only, inside every cross-validation fold, so test rows never leak into the target.
+- **Simple gradient boosting is the best of a similar group**, not a clear winner (ridge ties it on cassava). A flexible setting overfits, for example maize train R² 0.60 against test 0.18.
+- **Tuning did not help.** On held-out segments the untuned and tuned simple models score within about 0.01 of each other, so we keep the simple setting (held-out R²: maize 0.23, bush bean 0.16, cassava 0.27).
+- **Classification backup** (above or below the crop's median): accuracy 66% for maize, 64% for bush bean and 72% for cassava, against 51%, 47% and 46% for always guessing the common class.
+- **What drives the models:** district is the largest factor for all three crops, by far for cassava and bush bean. For maize, fertilizer per hectare, plot size and seed cost come next. Soil erosion shows a clear trend in the EDA but matters little in the model. These are associations, not causes.
+
+Overall the survey explains some of the difference between plots of the same crop, not most of it. Weather and management are not in the data.
+
+## Demo
+
+A small app (Gradio, runs in Colab) takes a crop, district, land type, plot size, erosion degree, fertilizer, pesticide, irrigation, seed type and hired labour, and returns the expected yield and its ratio to the typical plot of that crop. Step 14 of the notebook adds two district views: which districts sit above or below typical, and the model's expected yield for a typical plot in each district.
 
 ## Data
 
-Season A microdata from NISR, 2021/22 (the only year loaded so far):
+NISR Seasonal Agriculture Survey, Season A 2021/22. The raw files are **not included** in this repository. Download the three zip files below, or from the NISR microdata portal (registration required), and see [`data/README.md`](data/README.md).
 
 | Table | Link |
 |---|---|
@@ -36,100 +46,40 @@ Season A microdata from NISR, 2021/22 (the only year loaded so far):
 | Fertilizers & pesticides | https://data.gov.rw/datasets/22d2c879-f825-4a2c-94ad-a43cd5d182d7 |
 | Agricultural practice | https://data.gov.rw/datasets/f90119dc-ead8-49d7-9550-0e2c26a1363f |
 
-Portals: https://data.gov.rw/ and https://www.microdata.statistics.gov.rw (downloading from the microdata portal requires registering).
+The tables link on `segment_id`, farmer (`s1q6`) and plot number (`s2q1`). The fertilizer table has one row per product, so it is collapsed to one row per plot before merging (99.6% of crop rows matched, no duplicated rows). After cleaning, 34,894 plot-crop rows across 16 crops remain.
 
-**The raw data is not stored in this repository.** Download the three zip files and place them, unmodified, in `data/raw/`:
-
-```
-data/raw/Season_A__Agricultural_Practice.zip
-data/raw/Season_A__Crop_production.zip
-data/raw/Season_A__Fertilizers___Pesticides.zip
-```
-
-A plot is identified by `segment_id`, `s1q6` (farmer) and `s2q1` (plot number). The fertilizer table has one row per product, so it is aggregated to plot level before merging. After merging, the row count matches the crop table.
-
-## Method (what the notebook does)
-
-1. Load and merge the three 2021/22 tables into one crop-on-plot table.
-2. Clean: drop rows with missing or zero yield, keep crops with at least 300 rows, cap yield at the 99th percentile within each crop, work on the log scale.
-3. Build features: crop, location, farmer, plot size, organic / inorganic fertilizer, pesticide, erosion degree, anti-erosion, land consolidation, irrigation.
-4. EDA: distributions, missing values, relative yield by erosion degree.
-5. Quick check per main crop (maize, bush bean, cassava) with gradient boosting (a "simple" and a "flexible" setting), compared with a "dumb guess" that always predicts the crop median. All scores use 5-fold cross-validation **grouped by survey segment**, so plots from the same area never appear on both sides.
-6. Pooled model for all main crops with per-crop scores.
-7. Classification backup (above or below the crop median).
-8. Permutation importance for the maize model.
-
-## Results so far (2021/22)
-
-Cleaning: 41,589 crop rows, 4,381 with missing yield and 1,319 with zero yield removed, leaving **34,894 rows across 16 crops**.
-
-Test R2 is measured on relative yield, so 0 means "no better than guessing the crop median".
-
-| Crop | Rows | Simple model (test / train R2) | Flexible model (test / train R2) | MAE kg/ha: simple vs median guess |
-|---|---|---|---|---|
-| Maize | 7,319 | 0.170 / 0.242 | 0.133 / 0.509 | 778 vs 857 |
-| Bush bean | 5,533 | 0.102 / 0.184 | 0.054 / 0.513 | 265 vs 283 |
-| Cassava | 1,828 | 0.230 / 0.327 | 0.113 / 0.792 | 4,357 vs 5,433 |
-
-- Pooled model (all main crops, flexible): test R2 **0.145**, train R2 0.293.
-- Pooled per-crop test R2 (largest crops): maize 0.177, cooking banana 0.171, Irish potato 0.326, cassava 0.154, climbing bean 0.120, bush bean 0.084, banana for beer 0.038, dessert banana 0.018.
-- Erosion: median relative yield rises as erosion gets less severe. Maize goes from -0.193 (severe) to +0.056 (very low); bush bean from -0.210 to +0.038; cassava is nearly flat.
-- Against the rule of thumb in the project documentation, maize and cassava reach about 0.2 or higher ("continue with yield") and bush bean is in between ("refine, then decide").
-
-How to read this: the survey explains a small but real share of within-crop differences. The flexible model overfits (train R2 far above test R2), and the simple model generalises better. The factor rankings are associations, not causes. The numbers above are copied from the saved notebook outputs.
-
-## Reproduce
-
-**Local (Windows PowerShell):**
-
-```powershell
-git clone https://github.com/tmachingur-code/predicting-crop-yield-rwanda.git
-cd predicting-crop-yield-rwanda
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-# put the three zips in data\raw, then:
-cd notebooks
-jupyter lab Predicting_Crop_Yield_Rwanda.ipynb
-```
-
-To keep the zips elsewhere, set `CROP_DATA_DIR` to that folder before starting Jupyter.
-
-**Google Colab:** click the badge above and put the three zips in `My Drive/rwanda_sas_zips`.
-
-## Repository layout
+## Repository structure
 
 ```
-notebooks/Predicting_Crop_Yield_Rwanda.ipynb   main analysis
-docs/PROBLEMS_AND_FIXES.md                     issues found in review and how to fix them
-data/raw/                                      put the NISR zip files here (not committed)
-requirements.txt                               Python dependencies
+notebooks/   main notebook: load, merge, clean, EDA, model comparison, tuning, importance, demo, district views
+docs/        project documentation
+data/        place the downloaded zip files here (not committed)
+README
+.gitignore
+requirements.txt
 ```
+
+## How to run
+
+**Google Colab (recommended):**
+1. Upload the zip files to a Google Drive folder.
+2. Open `notebooks/Predicting_Crop_Yield_Rwanda_Final_with_Demo.ipynb` in Colab and set the folder name in Step 2.
+3. Run all cells (about 5 minutes). The last cells print a public demo link that works while the session is running.
+
+**Locally:** `pip install -r requirements.txt`, put the zips in `data/`, and run the notebook with Jupyter. The notebook reads each zip's README to find the survey year and table, so file names do not matter.
 
 ## Limitations
 
-- Season A only. Findings do not cover seasons B and C.
-- These are associations: irrigated or consolidated plots may simply be in better regions.
-- Yield also depends on weather, soil and management that the survey does not capture.
-- Only about 13% of crop rows are on single-crop plots, because fertilizer and erosion are recorded per plot, so every crop on a plot gets the same values.
-- Irrigation is blank for about 92% of rows. Blanks are treated as missing, and the skip logic still needs confirming.
-- Zero yields are dropped (the log of zero is undefined), although some may be genuine crop failures.
+- Season A, 2021/22 only. 2020/21 and 2023/24 are not harmonised (different crop codes, text labels, and no yield column in 2023/24), so there is no year-to-year test and **no forecast of future years**. The model describes a normal season like 2021/22.
+- Results are associations, not proof of cause. District probably stands in for climate, soil and market access.
+- Extreme yields are capped at the 99th percentile within each crop. Seed cost assumes a blank means no purchase.
+- Farmer gender and age are controls only. Recommendations should rest on practices and districts.
 
-## Roadmap
+## Future work
 
-- [x] Merge the 2021/22 crop, fertilizer and practice tables
-- [x] Cleaning and relative-yield target with fold-safe medians and caps
-- [x] EDA and quick check on maize, bush bean and cassava
-- [x] Pooled model with per-crop scores
-- [ ] Year-to-year test: train on 2020/21, test on 2021/22
-- [ ] Load the anti-erosion screening table (measure types, cost)
-- [ ] Add seed, labour and planting-timing features
-- [ ] Compare one pooled model with one model per crop, plus a linear baseline
-- [ ] Save and report classification-backup results
-- [ ] SHAP explanations and plain-language recommendations
-- [ ] Add 2023/24 once its coding is harmonised
-- [ ] Decide whether to use survey weights
+Harmonise 2020/21 for a year-to-year test, add rainfall and temperature by district, extend to more crops and seasons, and explain predictions with SHAP.
 
-## Team
+## Acknowledgements
 
-Charles, Tsungirirai and Mugisha, guided by Stephen.
+Data: National Institute of Statistics of Rwanda (NISR). Thanks to Stephen for mentorship. Survey data is subject to the portal's terms and must not be redistributed.
+
