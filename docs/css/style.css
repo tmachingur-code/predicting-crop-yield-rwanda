@@ -1,0 +1,304 @@
+/* ===== 1. Design tokens ===== */
+:root {
+  --green: #1f3d2b;
+  --amber: #d98e2b;
+  --background: #f6f4ee;
+  --text: #1e2420;
+  --muted: #5c665f;
+  --line: #dde3dc;
+}
+
+/* ===== 2. Base ===== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--background);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 12px;
+  font-family: "Space Grotesk", Inter, sans-serif;
+  line-height: 1.15;
+  color: var(--green);
+}
+
+a {
+  color: #2b6a42;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+li {
+  margin: 6px 0;
+}
+
+/* ===== 3. Layout ===== */
+section {
+  padding: 64px 24px;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.section-alt {
+  background: #fff;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* ===== 4. Navigation and footer ===== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 20px;
+  padding: 12px 24px;
+  background: var(--green);
+}
+
+.nav-brand {
+  margin-right: auto;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  color: #fff;
+}
+
+.nav a {
+  font-size: 0.9rem;
+  text-decoration: none;
+  color: #d9e2da;
+}
+
+.nav a:hover {
+  color: #fff;
+}
+
+.footer {
+  padding: 32px 24px;
+  font-size: 0.9rem;
+  color: #b7c4ba;
+  background: var(--green);
+}
+
+/* ===== 5. Hero ===== */
+.hero {
+  padding: 88px 24px 72px;
+  color: var(--background);
+  background: var(--green);
+}
+
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  color: #fff;
+}
+
+.hero p {
+  max-width: 640px;
+  font-size: 1.15rem;
+  color: #d9e2da;
+}
+
+.hero .tag {
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--amber);
+}
+
+.button {
+  display: inline-block;
+  margin: 12px 12px 0 0;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--amber);
+}
+
+.button-outline {
+  color: #fff;
+  background: none;
+  border: 1px solid #9fb3a5;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  margin-top: 40px;
+  font-size: 0.9rem;
+  color: #b7c4ba;
+}
+
+.stats strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.8rem;
+  color: #fff;
+}
+
+/* ===== 6. Cards and steps ===== */
+.card {
+  padding: 22px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.section-alt .card {
+  background: var(--background);
+}
+
+.card h3 {
+  font-size: 1.15rem;
+}
+
+.card p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #3b463f;
+}
+
+.step-number {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--amber);
+}
+
+/* ===== 7. Demo form and result ===== */
+.plot-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.plot-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: #3b463f;
+}
+
+.plot-form select,
+.plot-form input[type="number"] {
+  padding: 9px;
+  font-size: 1rem;
+  background: #fff;
+  border: 1px solid #c9d1ca;
+  border-radius: 8px;
+}
+
+.plot-form .checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+}
+
+.result {
+  margin-top: 16px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.result h3 {
+  font-size: 1.4rem;
+}
+
+.gauge {
+  position: relative;
+  height: 10px;
+  margin: 20px 0 6px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #c0504d, #e8d9b0 50%, #4c8c5a);
+}
+
+.gauge-marker {
+  position: absolute;
+  top: -6px;
+  width: 4px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--text);
+  transform: translateX(-50%);
+}
+
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.note {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.warning {
+  color: #9a5b00;
+}
+
+/* ===== 8. Results table ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+th,
+td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--green);
+  background: #eef2ee;
+}
+
+/* ===== 9. Small screens ===== */
+@media (max-width: 560px) {
+  section {
+    padding: 48px 20px;
+  }
+
+  .plot-form {
+    grid-template-columns: 1fr;
+  }
+}
