@@ -4,6 +4,8 @@ Machine learning on Rwanda's Seasonal Agriculture Survey (Season A, 2021/22). Fo
 
 **Team:** Charles, Tsungirirai, Mugisha | **Mentor:** Stephen
 
+**Live demo:** https://tmachingur-code.github.io/predicting-crop-yield-rwanda/
+
 ## The problem
 
 Yields differ a lot between plots, even for the same crop. Extension officers, cooperatives and agricultural planners need to know where plots are likely to fall short, and which conditions go with that, so limited support can be targeted. Existing survey data answers this only at an aggregate level.
@@ -34,7 +36,11 @@ Overall the survey explains some of the difference between plots of the same cro
 
 ## Demo
 
-A small app (Gradio, runs in Colab) takes a crop, district, land type, plot size, erosion degree, fertilizer, pesticide, irrigation, seed type and hired labour, and returns the expected yield and its ratio to the typical plot of that crop. Step 14 of the notebook adds two district views: which districts sit above or below typical, and the model's expected yield for a typical plot in each district.
+**Live website:** https://tmachingur-code.github.io/predicting-crop-yield-rwanda/
+
+A one-page site that explains the project and lets you try the model. Choose a crop, district, land type, plot size, erosion degree, fertilizer, pesticide, irrigation, seed type and hired labour, and it returns the expected yield and its ratio to the typical plot of that crop. It runs entirely in the browser (the trained model is exported to JavaScript), so there is nothing to install and no server.
+
+The notebook also contains the same demo as a Gradio app for Colab (Step 13), and Step 14 adds two district views: which districts sit above or below typical, and the model's expected yield for a typical plot in each district.
 
 ## Data
 
@@ -52,7 +58,7 @@ The tables link on `segment_id`, farmer (`s1q6`) and plot number (`s2q1`). The f
 
 ```
 notebooks/   main notebook: load, merge, clean, EDA, model comparison, tuning, importance, demo, district views
-docs/        project documentation
+docs/        demo website served by GitHub Pages (index.html, css/, js/) and the project documentation
 data/        place the downloaded zip files here (not committed)
 README
 .gitignore
@@ -75,6 +81,10 @@ requirements.txt
 - Extreme yields are capped at the 99th percentile within each crop. Seed cost assumes a blank means no purchase.
 - Farmer gender and age are controls only. Recommendations should rest on practices and districts.
 
+## Updating the website model
+
+The website uses the trained models exported to `docs/js/model.js` (generated, do not edit by hand). If the model or features change, re-export the models and replace that file, otherwise the website will keep showing the old model.
+
 ## Future work
 
 Harmonise 2020/21 for a year-to-year test, add rainfall and temperature by district, extend to more crops and seasons, and explain predictions with SHAP.
@@ -82,4 +92,3 @@ Harmonise 2020/21 for a year-to-year test, add rainfall and temperature by distr
 ## Acknowledgements
 
 Data: National Institute of Statistics of Rwanda (NISR). Thanks to Stephen for mentorship. Survey data is subject to the portal's terms and must not be redistributed.
-
