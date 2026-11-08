@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rwanda crop yield demo</title>
+<style>
+body{font-family:Inter,system-ui,sans-serif;background:#f6f4ee;color:#1e2420;margin:0}
+main{max-width:760px;margin:0 auto;padding:24px 16px 48px}
+h1{color:#1f3d2b;font-size:1.5rem;margin:0 0 4px}.sub{color:#5c665f;margin:0 0 20px}
+form{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;background:#fff;padding:20px;border:1px solid #dde3dc;border-radius:12px}
+label{display:flex;flex-direction:column;font-size:.85rem;gap:4px;color:#3b463f}
+select,input[type=number]{padding:8px;border:1px solid #c9d1ca;border-radius:8px;font-size:1rem}
+.ck{flex-direction:row;align-items:center;gap:8px;font-size:1rem}
+#out{margin-top:20px;background:#fff;padding:20px;border:1px solid #dde3dc;border-radius:12px;line-height:1.5}
+#out h2{margin:0 0 8px;color:#1f3d2b;font-size:1.3rem}.note{color:#5c665f;font-size:.85rem}.warn{color:#9a5b00}
+@media(max-width:560px){form{grid-template-columns:1fr}}
+</style></head><body><main>
+<h1>How does this plot compare with a typical plot of the same crop?</h1>
+<p class="sub">Trained on the 2021/22 Season A Seasonal Agriculture Survey (NISR). Maize, bush bean and cassava.</p>
+<form id="f"></form><div id="out"></div>
+<script src="model.js"></script>
+<script>
+const D={11:"Nyarugenge",12:"Gasabo",13:"Kicukiro",21:"Nyanza",22:"Gisagara",23:"Nyaruguru",24:"Huye",25:"Nyamagabe",26:"Ruhango",27:"Muhanga",28:"Kamonyi",31:"Karongi",32:"Rutsiro",33:"Rubavu",34:"Nyabihu",35:"Ngororero",36:"Rusizi",37:"Nyamasheke",41:"Rulindo",42:"Gakenke",43:"Musanze",44:"Burera",45:"Gicumbi",51:"Rwamagana",52:"Nyagatare",53:"Gatsibo",54:"Kayonza",55:"Kirehe",56:"Ngoma",57:"Bugesera"};
+const CROP={"Maize":1,"Bush bean":10,"Cassava":9},LAND={"Hillside cropland":10,"Marshland cropland":20,"Rangelands":30,"Mixed":40},
+EROS={"Severe (rill, gully, landslides)":1,"Moderate":2,"Low":3,"Very low (splash only)":4},SEED={"Traditional":1,"Improved":2,"Both":3};
+function inCat(bits,c){return c>=0&&c<256&&((bits[c>>5]>>>(c&31))&1)===1}
+function predict(m,x){let s=m.base;for(const t of m.trees){let i=0;for(;;){const n=t.n[i];if(n[5]){s+=n[4];break}
+ const v=x[n[0]];let left;if(Number.isNaN(v))left=n[6]===1;else if(n[7])left=inCat(t.b[n[8]],v);else left=v<=n[1];i=left?n[2]:n[3]}}return s}
+function row(crop,o){const r=Object.assign({},MODEL.typical[crop]);Object.assign(r,o);const m=MODEL.models[crop],x=MODEL.features.map(f=>r[f]);
+ return m.order.map((fi,k)=>{if(k<m.ncat){const j=m.cats[k].indexOf(x[fi]);return j<0?NaN:j}return x[fi]})}
+function run(a){const dc=+Object.keys(D).find(k=>D[k]===a.district),m2=Math.max(a.m2||0,50),ha=m2/1e4,fert=Math.max(a.fert||0,0),lab=Math.max(a.lab||0,0);
+ const x=row(a.crop,{s1q1:Math.floor(dc/10),s1q2:dc,s1q3:LAND[a.land],s2q2:m2,erosion:EROS[a.eros],inorganic:fert>0?1:0,n_inorg_products:fert>0?1:0,
+ fert_kg_ha:Math.log1p(fert/ha),pesticide:a.pest?1:0,irrigated:a.irr?1:0,seed_type:SEED[a.seed],labour_ha:Math.log1p(lab/ha)});
+ const ratio=Math.exp(predict(MODEL.models[a.crop],x));return{ratio,expected:ratio*MODEL.median[a.crop],typical:MODEL.median[a.crop],err:MODEL.err[a.crop],n:MODEL.nplots[CROP[a.crop]+"_"+dc]||0}}
+const F=document.getElementById("f"),sel=(id,l,o,v)=>`<label>${l}<select id="${id}">${o.map(k=>`<option${k===v?" selected":""}>${k}</option>`).join("")}</select></label>`,
+num=(id,l,v)=>`<label>${l}<input type="number" id="${id}" value="${v}" min="0"></label>`,ck=(id,l)=>`<label class="ck"><input type="checkbox" id="${id}">${l}</label>`;
+F.innerHTML=sel("crop","Crop",Object.keys(CROP),"Maize")+sel("district","District",Object.values(D).sort(),"Nyagatare")+sel("land","Land type of the area",Object.keys(LAND),"Hillside cropland")+
+num("m2","Plot size (square metres)",3000)+sel("eros","Soil erosion on the plot",Object.keys(EROS),"Moderate")+num("fert","Inorganic fertilizer on the plot (kg, 0 if none)",0)+
+sel("seed","Seed type",Object.keys(SEED),"Traditional")+num("lab","Hired labour on the plot (Rwf, 0 if none)",0)+ck("pest","Pesticide used")+ck("irr","Plot irrigated");
+function show(){const g=i=>document.getElementById(i),a={crop:g("crop").value,district:g("district").value,land:g("land").value,m2:+g("m2").value,eros:g("eros").value,
+ fert:+g("fert").value,seed:g("seed").value,lab:+g("lab").value,pest:g("pest").checked,irr:g("irr").checked},r=run(a),pct=(r.ratio-1)*100,
+ side=Math.abs(pct)<10?"close to":(pct>0?"above":"below"),c=a.crop.toLowerCase(),fmt=v=>Math.round(v).toLocaleString("en-US");
+ g("out").innerHTML=`<h2>Expected ${c} yield: about ${fmt(r.expected)} kg/ha</h2><p>That is <b>${r.ratio.toFixed(2)} times</b> the typical ${c} plot (${fmt(r.typical)} kg/ha), so this plot is expected to be <b>${side} typical</b>${side==="close to"?"":" ("+Math.round(Math.abs(pct))+"% "+(pct>0?"above":"below")+")"}.</p>
+ <p>Typical error of the model for ${c}: about ${fmt(r.err)} kg/ha, so read this as a rough guide.</p>${r.n<30?`<p class="warn"><b>Caution:</b> the survey has only ${r.n} ${c} plots in ${a.district}, so the district effect is based on little data.</p>`:""}
+ <p class="note">Based on the 2021/22 Season A survey. The model shows associations in that data, not what a change would do on a real farm. Inputs not shown are set to the typical value for the crop. Describes a normal season, not a forecast.</p>`}
+F.addEventListener("input",show);show();
+</script></body></html>
